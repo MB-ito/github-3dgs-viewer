@@ -146,14 +146,14 @@
 
     const scene = new THREE.Scene();
 
-    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.01, 100);
-    camera.position.set(0.8, 0.4, 2.6);
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.01, 1000);
+    camera.position.set(2, 1, 6);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.target.set(0, 0, 0);
     controls.minDistance = 0.1;
-    controls.maxDistance = 30;
+    controls.maxDistance = 1000;
 
     scene.add(new THREE.HemisphereLight(0xffffff, 0x1a2430, 2.0));
 
@@ -175,6 +175,37 @@
       sphericalHarmonicsDegree: 0
     });
     viewerRoot.add(splatViewer);
+
+    function frameLoadedScene(object3D) {
+      const box = new THREE.Box3().setFromObject(object3D);
+      if (box.isEmpty()) {
+        return false;
+      }
+
+      const size = new THREE.Vector3();
+      const center = new THREE.Vector3();
+      box.getSize(size);
+      box.getCenter(center);
+
+      const maxSize = Math.max(size.x, size.y, size.z, 0.001);
+      const fitHeightDistance = maxSize / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5)));
+      const fitWidthDistance = fitHeightDistance / camera.aspect;
+      const distance = Math.max(fitHeightDistance, fitWidthDistance) * 1.6;
+
+      camera.near = Math.max(distance / 500, 0.01);
+      camera.far = Math.max(distance * 20, 1000);
+      camera.position.set(
+        center.x + distance * 0.45,
+        center.y + distance * 0.22,
+        center.z + distance
+      );
+      camera.updateProjectionMatrix();
+
+      controls.target.copy(center);
+      controls.maxDistance = distance * 8;
+      controls.update();
+      return true;
+    }
 
     async function ensureFileExists(path) {
       const response = await fetch(path, { method: 'HEAD', cache: 'no-store' });
@@ -201,6 +232,12 @@
           scale: [1, 1, 1]
         }
       ]);
+
+      requestAnimationFrame(() => {
+        if (!frameLoadedScene(viewerRoot)) {
+          setDetail(`${PLY_FILE} を表示しました。視点は手動で調整してください。`);
+        }
+      });
 
       setStatus('表示中');
       setDetail(`${PLY_FILE} を表示しました。GitHub Pages でも同じ構成で動作します。`);
