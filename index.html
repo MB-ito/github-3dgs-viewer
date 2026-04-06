@@ -121,7 +121,6 @@
 
     const PLY_FILE = './okuamano.ply';
     const MODEL_SCALE = 0.5;
-    const ORBIT_TARGET_DISTANCE = 12;
 
     const app = document.getElementById('app');
     const hudEl = document.getElementById('hud');
@@ -220,7 +219,7 @@
       camera.updateProjectionMatrix();
 
       const orbitDirection = new THREE.Vector3().subVectors(center, camera.position);
-      const orbitTargetDistance = Math.min(orbitDirection.length() * 0.8, ORBIT_TARGET_DISTANCE);
+      const orbitTargetDistance = camera.position.length();
       orbitDirection.normalize();
       controls.target.copy(camera.position).addScaledVector(orbitDirection, orbitTargetDistance);
       controls.maxDistance = distance * 8;
